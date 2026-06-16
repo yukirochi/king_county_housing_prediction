@@ -1,0 +1,8 @@
+version: 2
+
+sources:
+  - name: housing_raw_data
+    schema: raw
+
+    tables:
+      - name: housing_raw

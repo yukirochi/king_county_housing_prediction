@@ -1,0 +1,7 @@
+.venv
+.env
+__pycache__
+dbt_housing/.env
+dbt_housing/profiles.yml
+env
+logs
