@@ -20,6 +20,17 @@ curr = conn.cursor()
 sql = 'SELECT * FROM housing_staging'
 
 df = curr.execute(sql).fetch_pandas_all()
+# df['PRICE'] = df['PRICE'].astype(float)
+# df['DATE'] = pd.to_datetime(df['DATE'])
+# df['year_posted'] = df['DATE'].dt.year
+# df['month_posted'] = df['DATE'].dt.month
+# df['day_posted'] = df['DATE'].dt.day
+# df = df.drop(columns=['DATE'])
+
+
+# print(df.dtypes)
+
+
 
 
 
