@@ -2,7 +2,6 @@ WITH raw_data AS (
     SELECT * FROM {{ source('housing_raw_data', 'housing_raw') }}
 ),
 
--- 1. Calculate global statistics once
 global_stats AS (
     SELECT 
         MODE(TO_DATE(LEFT(date, 8), 'YYYYMMDD')) AS mode_date,
@@ -15,8 +14,7 @@ global_stats AS (
         MEDIAN(sqft_basement::INT) AS med_sqft_basement,
         MEDIAN(yr_built::INT) AS med_yr_built,
         MEDIAN(zipcode::INT) AS med_zipcode,
-        
-        -- New statistics for the remaining columns
+
         MEDIAN(price::NUMERIC) AS med_price,
         MEDIAN(lat::FLOAT) AS med_lat,
         MEDIAN(long::FLOAT) AS med_long,
@@ -25,10 +23,10 @@ global_stats AS (
     FROM raw_data
 ),
 
--- 2. Apply the imputations and cleaning rules
 cleaned AS (
     SELECT 
-        -- Original Columns
+
+        COALESCE(r.price::NUMERIC, s.med_price::NUMERIC)::NUMERIC AS price,
         COALESCE(TO_DATE(LEFT(r.date, 8), 'YYYYMMDD'), s.mode_date) AS date,
         COALESCE(r.bedrooms::INT, s.mode_bedrooms) AS bedrooms,
         COALESCE(r.bathrooms::INT, 0) AS bathrooms,
@@ -43,14 +41,23 @@ cleaned AS (
         COALESCE(r.sqft_basement::INT, s.med_sqft_basement)::INT AS sqft_basement,
         CASE WHEN r.yr_built::INT NOT BETWEEN 1900 AND 2015 THEN s.med_yr_built::INT ELSE r.yr_built::INT END AS year_built,
         COALESCE(r.yr_renovated::INT, 0) AS year_renovated,
-        CASE WHEN r.zipcode::INT NOT BETWEEN 98001 AND 98199 THEN s.med_zipcode::INT ELSE r.zipcode::INT END AS zipcode,
+      
 
-        -- Newly Added Columns
-        COALESCE(r.price::NUMERIC, s.med_price)::INT AS price,
         COALESCE(r.lat::FLOAT, s.med_lat) AS lat,
         COALESCE(r.long::FLOAT, s.med_long) AS long,
         COALESCE(r.sqft_living15::INT, s.med_sqft_living15)::INT AS sqft_living15,
-        COALESCE(r.sqft_lot15::INT, s.med_sqft_lot15)::INT AS sqft_lot15
+        COALESCE(r.sqft_lot15::INT, s.med_sqft_lot15)::INT AS sqft_lot15,
+        AVG(r.price::NUMERIC) OVER(PARTITION BY r.zipcode) as zipcode,
+        (2015 - COALESCE(NULLIF(r.yr_renovated::INT, 0), r.yr_built::INT))::INT as effective_age,
+        
+
+        CASE 
+                WHEN  (2015 - COALESCE(NULLIF(r.yr_renovated::INT, 0), r.yr_built::INT))::INT  >= 51 THEN 4
+                WHEN  (2015 - COALESCE(NULLIF(r.yr_renovated::INT, 0), r.yr_built::INT))::INT >= 16 THEN 3
+                WHEN  (2015 - COALESCE(NULLIF(r.yr_renovated::INT, 0), r.yr_built::INT))::INT >= 6 THEN 2
+                WHEN  (2015 - COALESCE(NULLIF(r.yr_renovated::INT, 0), r.yr_built::INT))::INT >= 0 THEN 1
+                ELSE 1
+        END as effective_age_status
 
     FROM raw_data r
     CROSS JOIN global_stats s
