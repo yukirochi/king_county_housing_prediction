@@ -1,5 +1,5 @@
 {
     "terminal.integrated.env.linux": {
-        "DBT_PROFILES_DIR": "${workspaceFolder}/dbt_sock"
+        "DBT_PROFILES_DIR": "${workspaceFolder}/dbt_housing"
     }
 }
